@@ -49,6 +49,7 @@ import Network.GRPC.Util.Session qualified as Session
 import Network.GRPC.Util.TLS (ServerValidation(..), SslKeyLog(..))
 import Network.GRPC.Util.TLS qualified as Util.TLS
 import Network.TLS (TLSException)
+import Data.ByteString.UTF8 qualified as BS.Strict.UTF8
 
 {-------------------------------------------------------------------------------
   Connection API
@@ -241,10 +242,10 @@ isFinalException err
 
 data Server =
     -- | Make insecure connection (without TLS) to the given server
-    ServerInsecure Authority
+    ServerInsecure Address
 
     -- | Make secure connection (with TLS) to the given server
-  | ServerSecure ServerValidation SslKeyLog Authority
+  | ServerSecure ServerValidation SslKeyLog Address
   deriving stock (Show)
 
 {-------------------------------------------------------------------------------
@@ -416,18 +417,18 @@ stayConnected connParams server connVar connCanClose =
 
         mRes <- try $
           case server of
-            ServerInsecure auth -> runTCPClient auth $ \sock ->
+            ServerInsecure addr -> runTCPClient addr $ \sock ->
               bracket (HTTP2.Client.allocSimpleConfig sock writeBufferSize)
                       HTTP2.Client.freeSimpleConfig $ \conf ->
                 HTTP2.Client.run
-                      (clientConfig auth Http)
+                      (clientConfig addr Http)
                       conf
                     $ \sendRequest _aux -> do
                   traceWith tracer $ ClientDebugConnectedInsecure
                   let conn = Session.ConnectionToServer sendRequest
                   atomically $ writeTVar connVar $ ConnectionReady connClosed conn
                   takeMVar connCanClose
-            ServerSecure validation sslKeyLog auth -> do
+            ServerSecure validation sslKeyLog addr -> do
               keyLogger <- Util.TLS.keyLogger sslKeyLog
               caStore   <- Util.TLS.validationCAStore validation
               let settings :: HTTP2.TLS.Client.Settings
@@ -442,9 +443,10 @@ stayConnected connParams server connVar connCanClose =
                       }
 
               HTTP2.TLS.Client.run
+                    (clientConfig addr Https)
                     settings
-                    (authorityHost auth)
-                    (fromIntegral $ authorityPort auth)
+                    (addressHost addr)
+                    (fromIntegral $ addressPort addr)
                   $ \sendRequest _aux -> do
                 traceWith tracer $ ClientDebugConnectedSecure
                 let conn = Session.ConnectionToServer sendRequest
@@ -482,9 +484,9 @@ stayConnected connParams server connVar connCanClose =
                 threadDelay $ round $ delay * 1_000_000
                 loop reconnectPolicy'
 
-    runTCPClient :: Authority -> (Socket -> IO a) -> IO a
+    runTCPClient :: Address -> (Socket -> IO a) -> IO a
     runTCPClient auth =
-        Run.runTCPClient (authorityHost auth) (show $ authorityPort auth)
+        Run.runTCPClient (addressHost auth) (show $ addressPort auth)
 
     -- See docs of 'confBufferSize', but importantly: "this value is announced
     -- via SETTINGS_MAX_FRAME_SIZE to the peer."
@@ -493,15 +495,24 @@ stayConnected connParams server connVar connCanClose =
     writeBufferSize :: HPACK.BufferSize
     writeBufferSize = 4096
 
-    -- TODO: This is currently only used for the HTTP case, not HTTPS
-    clientConfig :: Authority -> Scheme -> HTTP2.Client.ClientConfig
-    clientConfig auth scheme = HTTP2.Client.defaultClientConfig {
-          HTTP2.Client.scheme    = rawScheme serverPseudoHeaders
-        , HTTP2.Client.authority = rawAuthority serverPseudoHeaders
+    clientConfig :: Address -> Scheme -> HTTP2.Client.ClientConfig
+    clientConfig addr scheme =
+        ( case scheme of
+            Http  -> HTTP2.Client.defaultClientConfig
+            Https -> HTTP2.TLS.Client.defaultClientConfig
+                       HTTP2.TLS.Client.defaultSettings
+        ) {
+          HTTP2.Client.authority =
+            -- The spec mandates the use of UTF8
+            -- <https://www.rfc-editor.org/rfc/rfc3986#section-3.2.2>
+            BS.Strict.UTF8.fromString $
+              case addressAuthority addr of
+                -- We omit the port number in the authority, for compatibility
+                -- with TLS SNI as well as the gRPC spec (the HTTP2 spec says
+                -- the port number is optional in the authority).
+                Nothing   -> addressHost addr
+                Just auth -> auth
         }
-      where
-        serverPseudoHeaders :: RawServerHeaders
-        serverPseudoHeaders = buildServerHeaders $ ServerHeaders scheme auth
 
     tracer :: Tracer IO ClientDebugMsg
     tracer = connDebugTracer connParams

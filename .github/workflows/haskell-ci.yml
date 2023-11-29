@@ -160,6 +160,11 @@ jobs:
           echo "package grapesy" >> cabal.project
           echo "    ghc-options: -Werror=missing-methods" >> cabal.project
           cat >> cabal.project <<EOF
+          source-repository-package
+            type:     git
+            location: https://github.com/edsko/http2-tls
+            tag:      1c94ec1b5f43b241c9bfb4c1a38d150f4faf9c45
+
           package grapesy
             tests:       True
             flags:       +build-demo +build-stress-test
