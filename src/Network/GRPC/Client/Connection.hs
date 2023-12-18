@@ -51,6 +51,8 @@ import Network.GRPC.Util.TLS qualified as Util.TLS
 import Network.TLS (TLSException)
 import Data.ByteString.UTF8 qualified as BS.Strict.UTF8
 
+import Type.Reflection
+
 {-------------------------------------------------------------------------------
   Connection API
 
@@ -296,6 +298,7 @@ withConnection connParams server k = do
           -> CallParams
           -> IO (Call rpc)
         startRPC _proxy callParams = do
+            traceWith tracer $ Session.NodeStartRPC (typeRep @rpc)
             (connClosed, conn) <-
               atomically $ do
                 connState <- readTVar connVar

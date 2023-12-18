@@ -54,6 +54,8 @@ import Network.GRPC.Util.Parser
 import Network.GRPC.Util.Session.API
 import Network.GRPC.Util.Thread
 
+import Type.Reflection
+
 {-------------------------------------------------------------------------------
   Definitions
 
@@ -573,5 +575,6 @@ data DebugMsg sess =
 
     -- | Receive thread received the trailers
   | NodeRecvFinal (Trailers (Inbound sess))
+  | forall rpc. NodeStartRPC (TypeRep rpc)
 
 deriving instance IsSession sess => Show (DebugMsg sess)
