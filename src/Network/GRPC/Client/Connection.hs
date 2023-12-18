@@ -298,7 +298,12 @@ withConnection connParams server k = do
           -> CallParams
           -> IO (Call rpc)
         startRPC _proxy callParams = do
-            traceWith tracer $ Session.NodeStartRPC (typeRep @rpc)
+            connStatusString <- flip fmap (atomically (readTVar connVar)) $ \c -> case c of
+              ConnectionNotReady               -> "ConnectionNotReady"
+              ConnectionReady _ _ -> "ConnectionReady"
+              ConnectionAbandoned err          -> "ConnectionAbandoned: " <> show err
+              ConnectionClosed                 -> "ConnectionClosed"
+            traceWith tracer $ Session.NodeStartRPC (typeRep @rpc) connStatusString
             (connClosed, conn) <-
               atomically $ do
                 connState <- readTVar connVar

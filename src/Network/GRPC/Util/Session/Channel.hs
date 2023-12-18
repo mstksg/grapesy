@@ -575,6 +575,6 @@ data DebugMsg sess =
 
     -- | Receive thread received the trailers
   | NodeRecvFinal (Trailers (Inbound sess))
-  | forall rpc. NodeStartRPC (TypeRep rpc)
+  | forall rpc. NodeStartRPC (TypeRep rpc) String
 
 deriving instance IsSession sess => Show (DebugMsg sess)
