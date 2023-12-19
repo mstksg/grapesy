@@ -393,7 +393,7 @@ data ConnectionState =
     -- | The connection is ready
     --
     -- The nested @TVar@ is written to when the connection is closed.
-  | ConnectionReady !(TMVar (Maybe SomeException)) !Session.ConnectionToServer
+  | ConnectionReady (TMVar (Maybe SomeException)) Session.ConnectionToServer
 
     -- | We gave up trying to (re)establish the connection
   | ConnectionAbandoned SomeException
