@@ -315,6 +315,7 @@ withConnection connParams server k = do
                   ConnectionReady connClosed conn -> return (connClosed, conn)
                   ConnectionAbandoned err          -> throwSTM err
                   ConnectionClosed                 -> error "impossible"
+            traceWith tracer $ Session.NodeStartRPC (typeRep @rpc) $ connStatusString ++ " (re-log)"
 
             cOut <- Meta.outboundCompression <$> currentMeta
             let flowStart :: Session.FlowStart (ClientOutbound rpc)
