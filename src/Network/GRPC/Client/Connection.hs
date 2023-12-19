@@ -303,7 +303,7 @@ withConnection connParams server k = do
             -- <<timeout>> in the very next line.
             connStatusString <- flip fmap (atomically (readTVar connVar)) $ \c -> case c of
               ConnectionNotReady  -> "ConnectionNotReady"
-              ConnectionReady _ _ -> "ConnectionReady (forced)"
+              ConnectionReady _ _ -> "ConnectionReady"
               ConnectionAbandoned err -> "ConnectionAbandoned: " <> show err
               ConnectionClosed        -> "ConnectionClosed"
             traceWith tracer $ Session.NodeStartRPC (typeRep @rpc) connStatusString

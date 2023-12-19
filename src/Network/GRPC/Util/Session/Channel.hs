@@ -468,7 +468,8 @@ sendMessageLoop sess tracer st stream =
         loop :: IO (Trailers (Outbound sess))
         loop = do
             traceWith tracer $ NodeSendAwaitMsg
-            msg <- atomically $ takeTMVar (flowMsg st)
+            msg <- Control.Exception.finally (atomically $ takeTMVar (flowMsg st))
+                (traceWith tracer NodeSendAwaitMsgSuccess)
             traceWith tracer $ NodeSendMsg msg
 
             case msg of
@@ -553,6 +554,7 @@ outboundTrailersMaker sess channel = go
 data DebugMsg sess =
     -- | Thread sending messages is awaiting a message
     NodeSendAwaitMsg
+  | NodeSendAwaitMsgSuccess
 
     -- | Thread sending message will send a message
   | NodeSendMsg (
