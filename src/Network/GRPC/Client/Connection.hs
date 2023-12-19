@@ -299,10 +299,10 @@ withConnection connParams server k = do
           -> IO (Call rpc)
         startRPC _proxy callParams = do
             connStatusString <- flip fmap (atomically (readTVar connVar)) $ \c -> case c of
-              ConnectionNotReady               -> "ConnectionNotReady"
+              ConnectionNotReady  -> "ConnectionNotReady"
               ConnectionReady _ _ -> "ConnectionReady"
-              ConnectionAbandoned err          -> "ConnectionAbandoned: " <> show err
-              ConnectionClosed                 -> "ConnectionClosed"
+              ConnectionAbandoned err -> "ConnectionAbandoned: " <> show err
+              ConnectionClosed        -> "ConnectionClosed"
             traceWith tracer $ Session.NodeStartRPC (typeRep @rpc) connStatusString
             (connClosed, conn) <-
               atomically $ do
@@ -389,7 +389,7 @@ data ConnectionState =
     -- | The connection is ready
     --
     -- The nested @TVar@ is written to when the connection is closed.
-  | ConnectionReady (TMVar (Maybe SomeException)) Session.ConnectionToServer
+  | ConnectionReady !(TMVar (Maybe SomeException)) !Session.ConnectionToServer
 
     -- | We gave up trying to (re)establish the connection
   | ConnectionAbandoned SomeException
