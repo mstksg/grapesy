@@ -216,6 +216,7 @@ data ClientDebugMsg =
     --
     -- Exceptions are considered fatal if there is no point retrying.
   | ClientDebugFatal FatalException
+  | ClientDebugWaitingOnCanClose
 
 deriving instance Show ClientDebugMsg
 
@@ -298,9 +299,11 @@ withConnection connParams server k = do
           -> CallParams
           -> IO (Call rpc)
         startRPC _proxy callParams = do
+            -- somehow, we get ConnectionReady here, and then STMException
+            -- <<timeout>> in the very next line.
             connStatusString <- flip fmap (atomically (readTVar connVar)) $ \c -> case c of
               ConnectionNotReady  -> "ConnectionNotReady"
-              ConnectionReady _ _ -> "ConnectionReady"
+              ConnectionReady _ _ -> "ConnectionReady (forced)"
               ConnectionAbandoned err -> "ConnectionAbandoned: " <> show err
               ConnectionClosed        -> "ConnectionClosed"
             traceWith tracer $ Session.NodeStartRPC (typeRep @rpc) connStatusString
@@ -435,6 +438,7 @@ stayConnected connParams server connVar connCanClose =
                   traceWith tracer $ ClientDebugConnectedInsecure
                   let conn = Session.ConnectionToServer sendRequest
                   atomically $ writeTVar connVar $ ConnectionReady connClosed conn
+                  traceWith tracer $ ClientDebugWaitingOnCanClose
                   takeMVar connCanClose
             ServerSecure validation sslKeyLog addr -> do
               keyLogger <- Util.TLS.keyLogger sslKeyLog
@@ -459,6 +463,7 @@ stayConnected connParams server connVar connCanClose =
                 traceWith tracer $ ClientDebugConnectedSecure
                 let conn = Session.ConnectionToServer sendRequest
                 atomically $ writeTVar connVar $ ConnectionReady connClosed conn
+                traceWith tracer $ ClientDebugWaitingOnCanClose
                 takeMVar connCanClose
 
         thisReconnectPolicy <- atomically $ do
