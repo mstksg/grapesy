@@ -82,6 +82,8 @@ data ServerDebugMsg =
   | ServerDebugAcceptCall
   | ServerDebugCleanup
   | ServerDebugRunningHandler
+  | ServerDebugRunningHandlerWithChannel
+  | ServerDebugTeardown
 
 deriving instance Show ServerDebugMsg
 

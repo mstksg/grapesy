@@ -143,6 +143,7 @@ acceptCall params conn k = do
           -> Either SomeException ()
           -> IO ()
         handlerTeardown call@Call{callChannel} mRes = do
+            traceWith tracer Context.ServerDebugTeardown
             mUnclean <-
               case mRes of
                 Right () ->
@@ -194,6 +195,7 @@ acceptCall params conn k = do
           -> (forall a. IO a -> IO a)
           -> IO ()
         handler callChannel unmask = do
+            traceWith tracer Context.ServerDebugRunningHandler
             mRes <- try $ unmask $ k call
             handlerTeardown call mRes
           where
@@ -323,7 +325,7 @@ runHandler tracer setupResponseChannel handler = do
     mask $ \unmask -> do
       -- This sets up the channel but no response is sent yet
       callChannel   <- setupResponseChannel
-      traceWith tracer $ Context.ServerDebugRunningHandler
+      traceWith tracer $ Context.ServerDebugRunningHandlerWithChannel
       handlerThread <- asyncWithUnmask $ handler callChannel
 
       let loop :: IO ()
