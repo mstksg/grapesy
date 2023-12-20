@@ -120,6 +120,7 @@ acceptCall :: forall rpc.
   -> (Call rpc -> IO ())
   -> IO ()
 acceptCall params conn k = do
+    traceWith tracer Context.ServerDebugAcceptCall
     callRequestMetadata  <- newEmptyTMVarIO
     callResponseMetadata <- newTVarIO []
     callResponseKickoff  <- newEmptyTMVarIO
@@ -156,7 +157,8 @@ acceptCall params conn k = do
                   Session.close callChannel $ ExitCaseException err
 
             case mUnclean of
-              Nothing  -> return () -- Channel was closed cleanly
+              -- Nothing  -> return () -- Channel was closed cleanly
+              Nothing -> traceWith tracer Context.ServerDebugCleanup
               Just err ->
                 -- An unclean shutdown can have 3 causes:
                 --
@@ -204,7 +206,7 @@ acceptCall params conn k = do
               , callResponseKickoff
               }
 
-    runHandler setupResponseChannel handler
+    runHandler tracer setupResponseChannel handler
   where
     callSession :: ServerSession rpc
     callSession = ServerSession {
@@ -314,13 +316,14 @@ acceptCall params conn k = do
 -- library: exceptions will only be raised synchronously when communication is
 -- attempted, not asynchronously when we notice a problem.
 runHandler ::
-     IO (Session.Channel (ServerSession rpc))
+     Tracer IO Context.ServerDebugMsg -> IO (Session.Channel (ServerSession rpc))
   -> (Session.Channel (ServerSession rpc) -> (forall a. IO a -> IO a) -> IO ())
   -> IO ()
-runHandler setupResponseChannel handler = do
+runHandler tracer setupResponseChannel handler = do
     mask $ \unmask -> do
       -- This sets up the channel but no response is sent yet
       callChannel   <- setupResponseChannel
+      traceWith tracer $ Context.ServerDebugRunningHandler
       handlerThread <- asyncWithUnmask $ handler callChannel
 
       let loop :: IO ()

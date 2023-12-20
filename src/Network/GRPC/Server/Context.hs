@@ -79,6 +79,9 @@ data ServerDebugMsg =
 
      -- | Could not connect to the client
   | ServerDebugAcceptFailed SomeException
+  | ServerDebugAcceptCall
+  | ServerDebugCleanup
+  | ServerDebugRunningHandler
 
 deriving instance Show ServerDebugMsg
 
