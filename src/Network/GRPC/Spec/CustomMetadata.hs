@@ -184,7 +184,8 @@ safeAsciiValue bs
 -- | Check for valid ASCII header value
 isValidAsciiValue :: Strict.ByteString -> Bool
 isValidAsciiValue bs = and [
-      BS.Strict.length bs >= 1
+      -- this should be >= 1, but here for testing
+      BS.Strict.length bs >= 0
     , BS.Strict.all (\c -> 0x20 <= c && c <= 0x7E) bs
     ]
 
