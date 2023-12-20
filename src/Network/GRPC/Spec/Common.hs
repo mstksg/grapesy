@@ -55,6 +55,7 @@ parseContentType ::
 parseContentType proxy hdr =
     expectHeaderValue hdr $ [
         "application/grpc"
+      , "application/grpc+octet-stream"
       , "application/grpc+" <> serializationFormat proxy
       ]
 
