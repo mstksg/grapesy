@@ -32,6 +32,7 @@ data RequestInfo = RequestInfo {
     , requestPath    :: HTTP2.Path
     , requestHeaders :: [HTTP.Header]
     }
+  deriving Show
 
 data ResponseInfo = ResponseInfo {
       responseStatus  :: HTTP.Status

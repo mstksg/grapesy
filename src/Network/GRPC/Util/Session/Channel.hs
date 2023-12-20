@@ -54,6 +54,8 @@ import Network.GRPC.Util.Parser
 import Network.GRPC.Util.Session.API
 import Network.GRPC.Util.Thread
 
+import Network.HTTP2.Server qualified as Server
+import Network.HTTP.Types.Header (Header)
 import Type.Reflection
 
 {-------------------------------------------------------------------------------
@@ -578,5 +580,9 @@ data DebugMsg sess =
     -- | Receive thread received the trailers
   | NodeRecvFinal (Trailers (Inbound sess))
   | forall rpc. NodeStartRPC (TypeRep rpc) String
+  | NodeError SomeException
+  | NodeHeaders [Header]
+  | NodeRequest Server.Request
+  | NodeRequestInfo RequestInfo
 
 deriving instance IsSession sess => Show (DebugMsg sess)

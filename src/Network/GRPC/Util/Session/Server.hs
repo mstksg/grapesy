@@ -48,10 +48,12 @@ setupResponseChannel :: forall sess.
   --   allows the function to send a response of its own (typically, some kind
   --   of error response).
   -> IO (Channel sess)
-setupResponseChannel sess tracer conn startOutbound = do
+setupResponseChannel sess tracer conn startOutbound = catchAndThrow $ do
     channel <- initChannel
 
+    traceWith tracer $ NodeRequest (request conn)
     let requestHeaders = fromHeaderTable $ Server.requestHeaders (request conn)
+    traceWith tracer $ NodeHeaders requestHeaders
     requestMethod <- case Server.requestMethod (request conn) of
                        Just x  -> return x
                        Nothing -> throwIO PeerMissingPseudoHeaderMethod
@@ -59,6 +61,7 @@ setupResponseChannel sess tracer conn startOutbound = do
                        Just x  -> return x
                        Nothing -> throwIO PeerMissingPseudoHeaderPath
     let requestInfo = RequestInfo {requestHeaders, requestMethod, requestPath}
+    traceWith tracer $ NodeRequestInfo requestInfo
 
     inboundStart <-
       if Server.requestBodySize (request conn) == Just 0 then
@@ -101,6 +104,10 @@ setupResponseChannel sess tracer conn startOutbound = do
           respond conn $ resp
 
     return channel
+  where
+    catchAndThrow = handle $ \(e :: SomeException) -> do
+      traceWith tracer (NodeError e)
+      throwIO e
 
 {-------------------------------------------------------------------------------
   Auxiliary http2
