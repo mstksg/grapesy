@@ -25,7 +25,6 @@ import Control.Monad
 import Control.Monad.Catch
 import Control.Tracer
 import Data.ByteString qualified as Strict (ByteString)
-import Data.ByteString.Char8 qualified as BS.Strict.Char8
 import Data.Default
 import Data.Foldable (asum)
 import Data.Maybe (fromMaybe)
@@ -514,7 +513,7 @@ stayConnected connParams server connStateVar connOutOfScope =
           -- <https://github.com/kazu-yamamoto/http2-tls/issues/7>
           -- For consistency, we do the same as http2-tls here.
           HTTP2.Client.defaultClientConfig {
-              HTTP2.Client.authority = BS.Strict.Char8.pack authority
+              HTTP2.Client.authority = authority
             }
         Https ->
           HTTP2.TLS.Client.defaultClientConfig
